@@ -1,51 +1,57 @@
-# Remaining deployment actions
+# Remaining live deployment actions
 
-The code is prepared, but this environment has three real execution blockers:
+## Already completed
 
-1. No runtime secrets are configured here. App connectors do not automatically give a deployed app `DATABASE_URL`, Cloudinary keys, or `GEMINI_API_KEY`.
-2. `ariful-arif-232/civiclens-ai` returns 404. The available GitHub tool set has no create-repository action, and no authenticated local `gh`/Git CLI session is present. Other existing repositories must not be reused.
-3. The Vercel deployment tool's exposed schema accepts no arguments, but the service rejects the call because `target`, `name`, and `files` are missing. No valid supported request can currently be issued from that tool. It did not deploy anything.
+The source is published in `ariful-arif-232/civiclens-ai`. The compressed upload error is fixed. Hosted verification passed: npm ci, ESLint, TypeScript, 69 tests, production build and the local production-server demo integration scenario. See VERIFICATION.md for the run link and scope.
 
-Separately, this runtime cannot resolve the npm registry, so exact-version package installation/full build is blocked. Run CI in an internet-enabled environment before deployment.
+Do not recreate the repository, repeat restoration, or upload encoded source chunks again.
 
-## Recover all history, without restarting
+## 1. Import the existing repository into Vercel
 
-From the directory holding the extracted bundle:
+Use the already connected Vercel account and Hobby team `ariful-arif`.
+
+In the dashboard choose **Add New > Project**, select the GitHub repository **ariful-arif-232/civiclens-ai**, and import it as **civiclens-ai**. Keep the root directory at `.`, Next.js framework detection and the included vercel.json build configuration. Do not reuse any existing portfolio/store project, upgrade a plan, or purchase a domain.
+
+The chat's Vercel deployment action currently exposes no input fields but the upstream service requires `target`, `name` and `files`. A valid call returned that schema error; it did not create a deployment. Dashboard import is necessary unless an authenticated, supported deployment capability becomes available. GitHub access is working and does not need to be reconnected.
+
+## 2. Configure server-side production environment variables
+
+| Variable | Obtain / set privately |
+|---|---|
+| DATABASE_URL | Connect panel of the EXISTING Neon civiclens-ai project in Singapore |
+| CLOUDINARY_CLOUD_NAME | Existing Cloudinary account |
+| CLOUDINARY_API_KEY | Existing Cloudinary API Keys settings |
+| CLOUDINARY_API_SECRET | Existing Cloudinary API Keys settings |
+| GEMINI_API_KEY | The user's own Gemini API project with verified free-tier eligibility |
+| GEMINI_MODEL | A currently available vision-capable model in that account; configurable |
+| ADMIN_TOKEN | Password manager or cryptographically random generator, at least 24 characters |
+| DEMO_MODE | false |
+| FREE_TIER_CONFIRMED | true only after confirming all accounts, model and quotas |
+| MAX_REPORTS_PER_DAY | 20 |
+
+Never paste secrets in chat, commit them, put them in NEXT_PUBLIC variables, or show them in screenshots. Keep them in Vercel's secure server environment. Do not assume that connecting a chat app supplies runtime credentials automatically.
+
+To generate an authority token locally without displaying it:
 
 ```bash
-git clone civiclens-ai-history.bundle civiclens-ready
-cd civiclens-ready
-git remote remove origin
-npm ci
-npm run check
-npm run test:integration
+umask 077
+node -e "require('node:fs').writeFileSync('admin-token.local',require('node:crypto').randomBytes(32).toString('base64url'),{mode:0o600})"
 ```
 
-Create a new **private** GitHub repository named `civiclens-ai` under `ariful-arif-232`, without a README/license/init commit. Do not reuse any of the existing app repositories. With an authenticated GitHub CLI, the equivalent is:
+Use a password manager instead where practical. Never add that local file to Git; remove it after securely transferring the token. The token is required for admin status changes, not a public demo password.
 
-```bash
-gh repo create ariful-arif-232/civiclens-ai --private --source=. --remote=origin --push
-```
+The application quota is not a provider-side billing limit. Do not enable paid billing or model fallbacks. Missing credentials should remain clearly reported, never silently replaced with mock AI in production.
 
-Otherwise create the empty repository in GitHub and use:
+## 3. Deploy and verify real operation
 
-```bash
-git remote add origin https://github.com/ariful-arif-232/civiclens-ai.git
-git push -u origin main
-```
+Deploy after the environment is configured. If variables were added after a build, redeploy so that the deployment receives them.
 
-## Vercel
+The Neon baseline is already applied. Do not reset it or create another Neon project. Do not change `mess-manager` or `my-portfolio-db` in Supabase.
 
-Import only this new repository into the already connected Hobby account. Use Next.js auto-detection, root directory `.`, and the included `vercel.json`. Do not enable paid add-ons, paid plans or a custom domain purchase. Configure the variables listed in README in Vercel's server-side Production environment. Do not set `DEMO_MODE=true` on Vercel.
+Check `/api/health`, then use a non-sensitive real infrastructure photograph:
 
-Get the Neon connection string from the existing `civiclens-ai` project's Connect panel. Get Cloudinary runtime API credentials from the account's API Keys settings. Create/configure a Gemini key for a free-tier project, with no billing upgrade; confirm the selected model's availability. Generate the authority token locally using a password manager or crypto-safe generator. Never paste these secrets in an ordinary chat or commit them.
+`/report -> image upload -> Gemini analysis -> risk score -> Neon save -> issue details -> dashboard -> authorized admin status change`.
 
-Set `FREE_TIER_CONFIRMED=true` only after verifying all provider plans. The current code cannot guarantee billing from a key alone. `MAX_REPORTS_PER_DAY=20` is an application safeguard, not a provider budget setting.
+For scripted verification configure LIVE_URL, TEST_IMAGE_PATH, ADMIN_TOKEN, FREE_TIER_CONFIRMED=true and CONFIRM_LIVE_TEST=true securely, then run `npm run test:live` in an authenticated local environment. This creates a labeled verification report and progresses it to resolved; it does not silently delete a report. It requires the response to identify real vision analysis.
 
-First run preflight and read-only DB verification in an environment with secrets and internet. No new Neon project or database reset is necessary. Do not migrate `mess-manager` or `my-portfolio-db`.
-
-Deploy, then check `/api/health`, run the authorized `npm run test:live` check, and inspect mobile/desktop pages in a browser. Record real results in `docs/VERIFICATION.md`; do not carry over old passing results.
-
-## Optional cleanup after an online full verification
-
-The unused Supabase package and legacy directory were intentionally retained rather than inventing an unverified lockfile rewrite offline. Remove them using `npm uninstall @supabase/supabase-js` and `npm uninstall -D supabase`, then remove only this repository's unused `lib/supabase/` and `supabase/` files and rerun all checks. This is local code cleanup, never an action on existing live Supabase projects.
+Finally inspect desktop and mobile layouts in a browser. Record actual results in VERIFICATION.md. A passing local demo does not establish a live deployment or real AI inference.
