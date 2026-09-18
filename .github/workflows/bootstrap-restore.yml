@@ -1,0 +1,39 @@
+name: Restore CivicLens source
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/bootstrap-restore.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Rebuild and restore application source
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .bootstrap/source00 .bootstrap/source01 .bootstrap/source02 .bootstrap/source03 .bootstrap/source04 .bootstrap/source05 .bootstrap/source06 .bootstrap/source07 .bootstrap/source08 .bootstrap/source09 .bootstrap/source10 .bootstrap/source11 .bootstrap/source12 .bootstrap/source13 > /tmp/source.b64
+          base64 -d /tmp/source.b64 > /tmp/source.tar.gz
+          mkdir -p /tmp/civiclens-source
+          tar -xzf /tmp/source.tar.gz -C /tmp/civiclens-source
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -a /tmp/civiclens-source/. .
+          rm -rf .bootstrap .restore
+          rm -f .github/workflows/bootstrap-restore.yml
+      - name: Commit restored source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "CivicLens Restore"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "chore: restore CivicLens AI application source"
+          git push origin HEAD:main
