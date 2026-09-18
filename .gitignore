@@ -11,3 +11,6 @@ test-results/
 *.bundle
 *.zip
 verification-output/
+admin-token.local
+.bootstrap/
+.restore/
