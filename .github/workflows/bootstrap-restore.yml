@@ -1,47 +1,54 @@
-name: Restore CivicLens source
+name: Inspect source upload integrity
 
 on:
   workflow_dispatch:
   push:
-    paths:
-      - ".github/workflows/bootstrap-restore.yml"
-  pull_request:
     branches: [main]
+    paths: [".github/workflows/bootstrap-restore.yml"]
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: source-upload-diagnostics
+  cancel-in-progress: false
 
 jobs:
-  restore:
+  inspect:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-      - name: Rebuild and restore application source
+          persist-credentials: false
+      - name: Capture original bytes without executing or changing source
         shell: bash
         run: |
           set -euo pipefail
-          : > /tmp/source.b64
-          for n in 00 01 02 03 04 05 06 07 08 09 10 11 12; do
-            head -c 12000 ".bootstrap/source${n}" >> /tmp/source.b64
-          done
-          head -c 9736 .bootstrap/source13 >> /tmp/source.b64
-          test "$(wc -c < /tmp/source.b64)" -eq 165736
-          base64 -d /tmp/source.b64 > /tmp/source.tar.gz
-          tar -tzf /tmp/source.tar.gz >/dev/null
-          mkdir -p /tmp/civiclens-source
-          tar -xzf /tmp/source.tar.gz -C /tmp/civiclens-source
-          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
-          cp -a /tmp/civiclens-source/. .
-          rm -rf .bootstrap .restore
-          rm -f .github/workflows/bootstrap-restore.yml
-      - name: Commit restored source
-        shell: bash
-        run: |
-          set -euo pipefail
-          git config user.name "CivicLens Restore"
-          git config user.email "actions@users.noreply.github.com"
-          git add -A
-          git commit -m "chore: restore CivicLens AI application source"
-          git push origin HEAD:main
+          mkdir -p /tmp/civiclens-upload-diagnostic
+          tar -cf /tmp/civiclens-upload-diagnostic/upload-parts.tar .bootstrap .restore
+          python3 - <<'PY'
+          import base64, gzip, hashlib, pathlib
+          root = pathlib.Path('/tmp/civiclens-upload-diagnostic')
+          parts = sorted(pathlib.Path('.bootstrap').glob('source[0-9][0-9]'))
+          chunks = [p.read_bytes()[:12000 if n < 13 else 9736] for n, p in enumerate(parts)]
+          encoded = b''.join(chunks)
+          data = base64.b64decode(encoded, validate=True)
+          (root / 'uploaded-source.tar.gz').write_bytes(data)
+          lines = ['Diagnostic only: no application code executed and no Git refs changed.']
+          lines += [f'{p.name}: {p.stat().st_size} bytes' for p in parts]
+          lines += ['Compressed SHA256: ' + hashlib.sha256(data).hexdigest()]
+          try:
+              uncompressed = gzip.decompress(data)
+              lines += [f'Gzip integrity PASS: {len(uncompressed)} bytes']
+          except Exception as exc:
+              lines += ['Gzip integrity FAIL: ' + str(exc)]
+          (root / 'diagnosis.txt').write_text('\n'.join(lines) + '\n')
+          print('\n'.join(lines))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: civiclens-upload-diagnostic
+          path: /tmp/civiclens-upload-diagnostic/
+          retention-days: 1
+          if-no-files-found: error
