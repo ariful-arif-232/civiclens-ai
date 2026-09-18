@@ -5,6 +5,8 @@ on:
   push:
     paths:
       - ".github/workflows/bootstrap-restore.yml"
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: write
