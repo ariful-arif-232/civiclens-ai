@@ -22,8 +22,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          cat .bootstrap/source00 .bootstrap/source01 .bootstrap/source02 .bootstrap/source03 .bootstrap/source04 .bootstrap/source05 .bootstrap/source06 .bootstrap/source07 .bootstrap/source08 .bootstrap/source09 .bootstrap/source10 .bootstrap/source11 .bootstrap/source12 .bootstrap/source13 > /tmp/source.b64
+          : > /tmp/source.b64
+          for n in 00 01 02 03 04 05 06 07 08 09 10 11 12; do
+            head -c 12000 ".bootstrap/source${n}" >> /tmp/source.b64
+          done
+          head -c 9736 .bootstrap/source13 >> /tmp/source.b64
+          test "$(wc -c < /tmp/source.b64)" -eq 165736
           base64 -d /tmp/source.b64 > /tmp/source.tar.gz
+          tar -tzf /tmp/source.tar.gz >/dev/null
           mkdir -p /tmp/civiclens-source
           tar -xzf /tmp/source.tar.gz -C /tmp/civiclens-source
           find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
