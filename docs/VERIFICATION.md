@@ -1,75 +1,64 @@
 # Verification record - 2026-09-18
 
-## Scope and truthfulness
+## Current result
 
-This file describes the changed Neon/Cloudinary/Gemini source. It does not claim a deployment or carry the prior version's passing build forward.
+The migrated CivicLens source is now published on GitHub and has passed a complete hosted verification. This does **not** claim a Vercel deployment or real Gemini inference.
 
-## Actually completed
+Evidence: [successful recovery and checks, run 35298626915](https://github.com/ariful-arif-232/civiclens-ai/actions/runs/35298626915).
 
-- Restored the submitted Git bundle. It contains three original commits: `1b9bb73`, `693efe4`, `4ad7df0`. No fourth original setup commit was present in this uploaded bundle.
-- Replaced the application runtime Supabase database/storage path with isolated Neon SQL-over-HTTP and signed Cloudinary adapters.
-- Added Gemini image+text structured-output transport; preserved Zod response validation, bounded retries, and explicitly labeled fallback.
-- Preserved the deterministic risk scoring function.
-- Added persistent submission quotas, readiness checks, 4 MB upload limit, deployment config, protected status persistence, and live verification scripts.
-- Kept the original six pages and authority-token workflow.
+The restored application commit begins `8baea97`. The runner used Node 24.20.0 and the committed package-lock.json.
 
-## Tests run here
+| Check | Result |
+|---|---|
+| Source archive CRC and SHA256 | PASS |
+| All 76 original source-file checksums | PASS |
+| Source publication to main | PASS, no force-push |
+| npm ci | PASS |
+| ESLint | PASS |
+| Next.js route type generation and full TypeScript check | PASS |
+| Application, PostgreSQL-compatible, risk, validation and security tests | 40 passed, zero failures |
+| Mocked HTTP transport tests | 29 passed, zero failures |
+| Next.js production build | PASS |
+| Production-server local HTTP integration scenario | PASS |
 
-| Check | Result | Meaning |
-|---|---|---|
-| Native Node HTTP transport tests | **29 passed, 0 failed** | HTTP is mocked: validates request/response contracts, secret redaction, URL/path restrictions and failure handling |
-| Original risk tests | **26 passed, 0 failed** | Original risk code transpiled with cached TypeScript 5.8.3, then executed with Node 22.16.0 |
-| TS/TSX syntax/transpilation | Passed | Syntax only; not project typechecking with pinned TypeScript 6.0.3 |
-| JavaScript syntax checks | Passed | New transport and deployment verification scripts parsed by Node |
-| `git diff --check` | Passed | No whitespace errors in changes |
+The 69 tests are automated checks. The local end-to-end scenario uses explicitly labeled MOCK analysis and isolated local JSON persistence. It does not claim that Gemini, Cloudinary or Neon was accessed by the deployed application.
 
-The two executed test sets total **55 passing tests**. They are NOT the whole application suite and do not verify real provider inference or browser behavior.
+## End-to-end coverage actually exercised
 
-## Live Neon checks
+The production server was started in an isolated demo environment. Verification covered all six pages, image decoding and normalization, report submission, labeled demo analysis, deterministic scoring, durable persistence across a server restart, issue retrieval, filtering, dashboard updates, rejected unauthenticated status writes, valid status transitions, stale-update conflicts and safe errors when production configuration is absent.
 
-Target: existing project `civiclens-ai`, project ID `ancient-heart-79855573`, branch `production` (`br-flat-morning-b3z34hqn`), database `neondb`.
+Browser rendering, mobile layout and a real deployed report remain separate verification gates.
 
-Verified via the authenticated Neon connector:
+## Root cause and exact repair
 
-- Applied `001_civiclens` baseline is present.
-- `reports` has 20 columns.
-- RLS is enabled on all three CivicLens tables.
-- Status transition/timestamp trigger is present.
-- Constraints and expected-status optimistic updates work.
-- Application's JSON-to-record insert and JSON return shape work.
-- Atomic quota counter rejects over-limit reservations.
-- Verification fixtures were rolled back; final report count is zero.
+The previous restore jobs failed before dependency installation with `gzip: stdin: invalid compressed data--crc error`. The manually transported compressed archive contained one incorrect byte. Comparison with the original uploaded ZIP isolated the defect to compressed offset 75604: 0x56 instead of 0x52. It affected one character in package-lock.json after decompression.
 
-These checks confirm PostgreSQL behavior through the connector. They do not prove that Vercel has a usable DATABASE_URL or that application HTTP transport reached Neon from this runtime.
+The corrected archive passed its original gzip CRC, full SHA256 and all 76 per-file hashes against the user's original ZIP. No integrity check was disabled, and no package integrity value was guessed. See SOURCE-RECOVERY.md and SOURCE-RECOVERY.sha256.
 
-## Cloudinary check
+The temporary restore directories were removed from main after recovery, without deleting Git history. The obsolete restore-trigger pull request was closed without merging. The one-time restoration workflow was removed; ordinary CI now verifies source directly.
 
-A prior connector call successfully uploaded a small verification image into the CivicLens verification namespace. That tests connector/account storage access. It is not an application runtime upload or an AI-analyzed infrastructure report. No existing unrelated images were modified.
+## Prior live connector checks
 
-## Commands attempted but blocked
+The existing Neon project is `civiclens-ai` (`ancient-heart-79855573`), production branch `br-flat-morning-b3z34hqn`, database `neondb`.
 
-- `npm ci`: this environment cannot resolve `registry.npmjs.org`.
-- Offline installation: required pinned packages are not cached.
-- `npm run lint`: exit 127, `eslint` unavailable.
-- `npm run typecheck`: exit 127, `next` unavailable.
-- `npm test`: test files could not load the missing `tsx` dependency; full suite did not execute.
-- `npm run build`: exit 127, `next` unavailable.
-- Browser visual QA: app build/start unavailable, so not performed.
+Earlier authenticated connector checks verified the baseline migration, table constraints, row security, status/timestamp trigger, optimistic updates, JSON insert/read shape and atomic request budget. Temporary fixtures were rolled back; no citizen reports were seeded.
 
-These are not passing checks. Fix infrastructure/access and run them before publishing the changed version. Supabase dependency removal was deliberately deferred after offline lock regeneration failed; the existing pinned lock was restored.
+An earlier Cloudinary connector upload verified account storage access in the CivicLens verification namespace. That was not an application runtime upload or AI analysis.
 
-## External blockers
+## Remaining deployment gates
 
-- `ariful-arif-232/civiclens-ai` returned GitHub 404. No repository creation or push was performed.
-- GitHub connector exposes content/commit operations but no repository-creation action in this session; there is no authenticated Git CLI session here.
-- Vercel deploy tool rejected its exposed no-argument call: the service requested `target`, `name`, and `files`, which the exposed callable schema does not accept. No deployment exists from this work.
-- No runtime DATABASE_URL, Cloudinary API credentials, Gemini key or admin token is configured in this environment. None were printed or committed.
-- No real Gemini invocation was performed. Model availability/free quota for this account remains unverified.
+- Vercel still needs the dedicated CivicLens project imported from this GitHub repository.
+- The connected Vercel deployment action rejects its exposed no-argument invocation because the service requires target, name and files. No undocumented arguments or unrelated projects were used to bypass this limitation.
+- Runtime DATABASE_URL, Cloudinary API credentials, GEMINI_API_KEY and ADMIN_TOKEN must be configured securely for the application. Connector access does not automatically provide application runtime secrets.
+- The account's Gemini model availability and free quota must be verified. No real Gemini call has been performed.
+- After deployment: check /api/health, run the authorized real-image test, then verify the UI on desktop and mobile. Record real outcomes here.
 
-## Safety
+## Warnings and limitations
 
-No paid actions were taken. No project or plan was upgraded. The two unrelated Supabase projects were not modified or paused. No production reports were seeded. Public-image and provider-processing privacy limitations are documented in the UI and README.
+The successful run reported an ESLint version-support warning and Node-runtime deprecation warnings for the v4 GitHub actions. They did not cause the prior CRC failure. A green build and an npm audit result are not a guarantee of complete security.
 
-## Required completion gates
+Legacy Supabase files/packages are retained for now, but the application production routes use Neon and Cloudinary. The existing external mess-manager and my-portfolio-db projects remain untouched.
 
-Install pinned dependencies on an internet-enabled runtime -> lint/typecheck/full tests/build -> configure server secrets securely -> push preserved history to the dedicated repository -> deploy on verified Hobby resources -> real authorized image test -> mobile/desktop visual QA -> record outcomes here.
+The original local development Git commits remain in the history bundle inside the uploaded ZIP. They have not been recreated or presented as imported original commits in GitHub.
+
+No paid action, plan upgrade, secret publication or modification to unrelated applications was performed.
