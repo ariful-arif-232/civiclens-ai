@@ -1,1 +1,0 @@
-Temporary restore bootstrap for the existing CivicLens AI Git history. This file is removed when the preserved history is restored.

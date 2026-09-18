@@ -1,0 +1,13 @@
+node_modules/
+.next/
+.env*
+!.env.example
+.data/
+.sites-runtime/
+*.tsbuildinfo
+playwright-report/
+test-results/
+.vercel/
+*.bundle
+*.zip
+verification-output/
