@@ -1,4 +1,4 @@
-name: Inspect source upload integrity
+name: Verified source recovery and checks
 
 on:
   workflow_dispatch:
@@ -7,48 +7,46 @@ on:
     paths: [".github/workflows/bootstrap-restore.yml"]
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
-  group: source-upload-diagnostics
+  group: civiclens-source-recovery
   cancel-in-progress: false
 
 jobs:
-  inspect:
+  recover-and-check:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
         with:
-          persist-credentials: false
-      - name: Capture original bytes without executing or changing source
+          ref: main
+          fetch-depth: 0
+      - name: Restore only after every source checksum matches
+        run: python3 .github/scripts/restore_verified_source.py
+      - name: Publish recovered source without rewriting history
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p /tmp/civiclens-upload-diagnostic
-          tar -cf /tmp/civiclens-upload-diagnostic/upload-parts.tar .bootstrap .restore
-          python3 - <<'PY'
-          import base64, gzip, hashlib, pathlib
-          root = pathlib.Path('/tmp/civiclens-upload-diagnostic')
-          parts = sorted(pathlib.Path('.bootstrap').glob('source[0-9][0-9]'))
-          chunks = [p.read_bytes()[:12000 if n < 13 else 9736] for n, p in enumerate(parts)]
-          encoded = b''.join(chunks)
-          data = base64.b64decode(encoded, validate=True)
-          (root / 'uploaded-source.tar.gz').write_bytes(data)
-          lines = ['Diagnostic only: no application code executed and no Git refs changed.']
-          lines += [f'{p.name}: {p.stat().st_size} bytes' for p in parts]
-          lines += ['Compressed SHA256: ' + hashlib.sha256(data).hexdigest()]
-          try:
-              uncompressed = gzip.decompress(data)
-              lines += [f'Gzip integrity PASS: {len(uncompressed)} bytes']
-          except Exception as exc:
-              lines += ['Gzip integrity FAIL: ' + str(exc)]
-          (root / 'diagnosis.txt').write_text('\n'.join(lines) + '\n')
-          print('\n'.join(lines))
-          PY
-      - uses: actions/upload-artifact@v4
+          git config user.name "CivicLens Recovery"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "fix: recover CivicLens source with verified original file checksums"
+          git push origin HEAD:main
+      - uses: actions/setup-node@v4
         with:
-          name: civiclens-upload-diagnostic
-          path: /tmp/civiclens-upload-diagnostic/
-          retention-days: 1
-          if-no-files-found: error
+          node-version: 24
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Unit and mocked transport tests
+        run: npm test
+      - name: Production build
+        run: npm run build
+      - name: Local end-to-end demo verification (not real AI)
+        run: npm run test:integration
