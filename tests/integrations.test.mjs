@@ -65,11 +65,12 @@ test('Cloudinary result URL checks host, account, asset, version, and format',()
     assert.equal(isReportImageUrl(url,'fixture',reportImageId(id)),false);
   }
 });
-test('Cloudinary uploads normalized bytes via signed server-side multipart',async()=>{
+test('Cloudinary uploads normalized bytes via server-side Basic Auth multipart',async()=>{
   const uploaded=await uploadImage(id,Buffer.from('normalized-photo'),cloud,async(url,opts)=>{
     assert.equal(url,'https://api.cloudinary.com/v1_1/fixture/image/upload');
     assert.equal(opts.redirect,'error'); assert.equal(opts.body.get('public_id'),reportImageId(id));
     assert.equal(opts.body.get('overwrite'),'false'); assert.equal(opts.body.get('api_secret'),null);
+    assert.equal(opts.body.get('api_key'),null); assert.ok(opts.headers.Authorization.startsWith('Basic '));
     assert.equal(opts.body.get('file').type,'image/webp');
     assert.equal(opts.body.get('file').name,'photo.webp');
     return json({public_id:reportImageId(id),resource_type:'image',secure_url:imageUrl});
