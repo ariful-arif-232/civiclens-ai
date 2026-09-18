@@ -1,0 +1,99 @@
+name: CivicLens live production smoke
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/live-production-smoke.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - name: Generate synthetic road-damage PNG
+        shell: python
+        run: |
+          import struct,zlib
+          w,h=640,360
+          rows=[]
+          for y in range(h):
+              row=bytearray([0])
+              for x in range(w):
+                  if y < 85:
+                      rgb=(165,205,235)
+                  elif y < 115:
+                      rgb=(100,120,85)
+                  else:
+                      # asphalt with lane edges
+                      shade=118 + ((x*13+y*7)%13)
+                      rgb=(shade,shade,shade)
+                      if abs(x-w//2)<5 and (y//34)%2==0:
+                          rgb=(235,220,100)
+                  # dark irregular pothole in foreground
+                  dx=(x-330)/120
+                  dy=(y-265)/48
+                  if dx*dx+dy*dy < 1 and y>220:
+                      edge=dx*dx+dy*dy
+                      rgb=(38,34,32) if edge < .72 else (70,62,58)
+                  row.extend(rgb)
+              rows.append(bytes(row))
+          raw=b''.join(rows)
+          def chunk(t,d):
+              return struct.pack(">I",len(d))+t+d+struct.pack(">I",zlib.crc32(t+d)&0xffffffff)
+          png=b'\x89PNG\r\n\x1a\n'+chunk(b'IHDR',struct.pack(">IIBBBBB",w,h,8,2,0,0,0))+chunk(b'IDAT',zlib.compress(raw,9))+chunk(b'IEND',b'')
+          open('/tmp/civiclens-pothole.png','wb').write(png)
+          print("generated",len(png),"bytes")
+
+      - name: Submit REAL production report
+        shell: bash
+        env:
+          BASE_URL: https://civiclens-ai-ariful-arif.vercel.app
+        run: |
+          set -euo pipefail
+          code=$(curl -sS --max-time 125 -o /tmp/response.json -w '%{http_code}' \
+            -H "Origin: $BASE_URL" \
+            -H "Referer: $BASE_URL/report" \
+            -F "photo=@/tmp/civiclens-pothole.png;type=image/png" \
+            -F "title=CivicLens production smoke pothole" \
+            -F "description=Authorized production verification: a deep pothole is visible in the road surface and may endanger vehicles and pedestrians." \
+            -F "area=Production Smoke Test Area" \
+            -F "latitude=" -F "longitude=" \
+            "$BASE_URL/api/reports")
+          cat /tmp/response.json
+          test "$code" = "201"
+          python - <<'PY'
+          import json
+          d=json.load(open('/tmp/response.json'))
+          r=d['report']
+          assert r['analysis_source']=='vision', r
+          assert r['is_demo'] is False, r
+          assert r['image_url'].startswith('https://res.cloudinary.com/'), r
+          assert 0 <= r['risk_score'] <= 100, r
+          print("LIVE_SMOKE_REPORT_ID="+r['id'])
+          print("LIVE_SMOKE_CATEGORY="+r['category'])
+          print("LIVE_SMOKE_SEVERITY="+r['severity'])
+          print("LIVE_SMOKE_RISK="+str(r['risk_score']))
+          PY
+
+      - name: Verify persisted report and dashboard
+        shell: bash
+        env:
+          BASE_URL: https://civiclens-ai-ariful-arif.vercel.app
+        run: |
+          set -euo pipefail
+          id=$(python -c "import json; print(json.load(open('/tmp/response.json'))['report']['id'])")
+          curl -fsS --max-time 30 "$BASE_URL/api/reports/$id" > /tmp/report.json
+          curl -fsS --max-time 30 "$BASE_URL/api/dashboard" > /tmp/dashboard.json
+          python - <<'PY'
+          import json
+          r=json.load(open('/tmp/report.json'))['report']
+          d=json.load(open('/tmp/dashboard.json'))
+          assert r['id']
+          assert d['totalReports'] >= 1
+          print("PASS: live Gemini vision + Cloudinary + Neon persistence + dashboard")
+          PY
