@@ -1,0 +1,59 @@
+name: CivicLens checks
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: civiclens-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NEXT_TELEMETRY_DISABLED: '1'
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Full TypeScript check
+        run: npm run typecheck
+      - name: Application and mocked transport tests
+        run: npm test
+      - name: Production build
+        run: npm run build
+      - name: Production-server demo integration (not real AI)
+        run: npm run test:integration
+      - name: Package verified tracked source only
+        if: github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git archive --format=zip HEAD --output="$RUNNER_TEMP/civiclens-ai-verified-source.zip"
+          printf 'Verified commit: %s\n' "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
+          printf 'Passed: lint, TypeScript, 69 tests, production build and demo HTTP integration.\n' >> "$GITHUB_STEP_SUMMARY"
+          printf 'Real Gemini inference, live deployment and browser QA are separate gates.\n' >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: github.ref == 'refs/heads/main'
+        with:
+          name: civiclens-ai-verified-source
+          path: ${{ runner.temp }}/civiclens-ai-verified-source.zip
+          retention-days: 3
+          if-no-files-found: error
