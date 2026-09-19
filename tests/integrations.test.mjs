@@ -10,7 +10,7 @@ const id='20000000-0000-4000-8000-000000000001';
 const cloud={cloudName:'fixture',apiKey:'fixture-key',apiSecret:'fixture-secret'};
 const imageUrl=`https://res.cloudinary.com/fixture/image/upload/v1/civiclens-ai/reports/${id}.webp`;
 const ai={key:'fixture-key',model:'gemini-2.5-flash-lite'};
-const input={description:'A deep pothole near the main gate.',imageData:'data:image/webp;base64,YWJjZA=='};
+const input={description:'Citizen report title: Rastar boro gorto\\nCitizen description: rastay onek deep gorto, gari control harale accident hote pare.',imageData:'data:image/webp;base64,YWJjZA=='};
 const json=x=>Response.json(x);
 
 test('Neon endpoint uses only the validated hostname, never the password',()=>{
@@ -99,6 +99,8 @@ test('Gemini sends real image bytes + description and JSON schema, with key in h
     assert.equal(url.includes('fixture-key'),false);assert.equal(opts.headers['x-goog-api-key'],'fixture-key');
     assert.equal(opts.redirect,'error');const body=JSON.parse(opts.body);
     assert.equal(body.contents[0].parts[0].text,input.description);
+    assert.match(body.systemInstruction.parts[0].text,/Bengali\/Bangla script/);
+    assert.match(body.systemInstruction.parts[0].text,/Banglish/);
     assert.equal(body.contents[0].parts[1].inlineData.data,'YWJjZA==');
     assert.equal(body.generationConfig.responseMimeType,'application/json');
     assert.deepEqual(body.generationConfig.responseJsonSchema,{type:'object'});

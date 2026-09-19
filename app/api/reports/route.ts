@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     uploaded = await saveImage(id, image);
     const analysis = await analyzeInfrastructureReport(
       {
-        description: input.description,
+        description: `Citizen report title: ${input.title}\nCitizen description: ${input.description}`,
         imageData: `data:image/webp;base64,${image.toString('base64')}`,
       },
       isDemo() ? new DemoProvider() : new GeminiVisionProvider(),

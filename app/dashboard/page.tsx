@@ -202,9 +202,10 @@ export default async function Dashboard() {
             {new Date(data.generatedAt).toLocaleTimeString('en-GB', {
               hour: '2-digit',
               minute: '2-digit',
-              timeZone: 'UTC',
+              hour12: true,
+              timeZone: 'Asia/Dhaka',
             })}{' '}
-            UTC
+            BD time
           </span>
         </div>
         {data.recentReports.map((r) => (
@@ -212,7 +213,14 @@ export default async function Dashboard() {
             <div>
               <h3>{r.title}</h3>
               <p>
-                {r.area} · {new Date(r.created_at).toLocaleDateString('en-GB', { timeZone: 'UTC' })}
+                {r.area} · {new Date(r.created_at).toLocaleString('en-GB', {
+                  day: 'numeric',
+                  month: 'short',
+                  hour: 'numeric',
+                  minute: '2-digit',
+                  hour12: true,
+                  timeZone: 'Asia/Dhaka',
+                })}
               </p>
             </div>
             <Badge value={r.status} />

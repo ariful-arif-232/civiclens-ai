@@ -28,11 +28,11 @@ export default async function Detail({ params }: { params: Promise<{ id: string 
             <MapPin size={14} />
             {r.area} · Reported{' '}
             {new Date(r.created_at).toLocaleString('en-GB', {
-              timeZone: 'UTC',
+              timeZone: 'Asia/Dhaka',
               dateStyle: 'medium',
               timeStyle: 'short',
             })}{' '}
-            UTC
+            Bangladesh time
           </p>
         </div>
       </div>
@@ -85,7 +85,11 @@ export default async function Detail({ params }: { params: Promise<{ id: string 
               ))}
             </div>
             <small className="subtle">
-              Last updated {new Date(r.updated_at).toLocaleDateString('en-GB', { timeZone: 'UTC' })}
+              Last updated {new Date(r.updated_at).toLocaleString('en-GB', {
+                timeZone: 'Asia/Dhaka',
+                dateStyle: 'medium',
+                timeStyle: 'short',
+              })} Bangladesh time
             </small>
           </div>
         </div>

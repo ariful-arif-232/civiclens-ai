@@ -111,10 +111,13 @@ export function ReportCard({ report: r }: { report: ScoredReport }) {
         <div className="card-meta">
           <span>{label(r.category)}</span>
           <span>
-            {new Date(r.created_at).toLocaleDateString('en-GB', {
+            {new Date(r.created_at).toLocaleString('en-GB', {
               day: 'numeric',
               month: 'short',
-              timeZone: 'UTC',
+              hour: 'numeric',
+              minute: '2-digit',
+              hour12: true,
+              timeZone: 'Asia/Dhaka',
             })}
           </span>
         </div>

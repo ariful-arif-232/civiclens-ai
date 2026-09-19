@@ -145,21 +145,22 @@ export function ReportForm({ demo }: { demo: boolean }) {
         <h2>Add a little context</h2>
       </div>
       <label>
-        Issue title
+        Issue title / সমস্যার নাম
         <input
           name="title"
-          placeholder="e.g. Deep pothole near the main gate"
+          placeholder="e.g. Deep pothole / রাস্তার বড় গর্ত / rastay boro gorto"
           minLength={5}
           maxLength={120}
           required
           disabled={busy}
         />
+        <small className="subtle">English, বাংলা বা Banglish — যেভাবে স্বাভাবিকভাবে লিখেন সেভাবেই লিখতে পারেন।</small>
       </label>
       <label>
-        What’s happening?
+        What’s happening? / কী সমস্যা হচ্ছে?
         <textarea
           name="description"
-          placeholder="Describe what you see, who is affected, and any immediate safety concerns…"
+          placeholder="e.g. Gorto ta onek deep, gari control harale accident hote pare / গর্তটা অনেক গভীর…"
           minLength={15}
           maxLength={3000}
           rows={4}
